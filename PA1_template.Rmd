@@ -1,20 +1,98 @@
 # Reproducible Research: Peer Assessment 1
 
 
-## Loading and preprocessing the data
+## 1 Loading and preprocessing the data
+### 1.1 Load data into "data" by read.csv()
+```{r, echo=TRUE}
+data <- read.csv("activity.csv");
+```
+### 1.2 Transform data$date to Date format by as.Date()
+```{r, echo=TRUE}
+data$date <- as.Date(data$date);
+```
+
+## 2 What is mean total number of steps taken per day?
+### 2.1 The histogram of the total number of steps taken each day is show as below:
+
+```{r, echo=TRUE}
+hist(tapply(data$steps,data$date,sum,na.rm=TRUE),main="Total number of steps distribution",xlab="steps",ylab="Frequency");
+```
+
+### 2.2 The mean and median total number of steps taken per day 
+
+```{r, echo=TRUE}
+mean(tapply(data$steps,data$date,sum,na.rm=TRUE));
+median(tapply(data$steps,data$date,sum,na.rm=TRUE));
+```
+
+## 3 What is the average daily activity pattern?
+### 3.1 The time series plot
+```{r, echo=TRUE}
+library(sqldf);
+tmp3 <- sqldf("select interval, avg(steps) as steps from data where steps>=0 group by interval order by interval");
+plot(tmp3$interval, tmp3$steps,type='l',xlab="interval",ylab="steps");
+```
+
+### 3.2 The interval that contains the maximum number of steps
+```{r, echo=TRUE}
+tmp <- tapply(data$steps,data$interval, sum, na.rm=TRUE);
+index <- as.numeric(names(tmp));
+num <- as.numeric(tmp);
+index[which(num==max(num))];
+```
+
+
+## 4 Imputing missing values
+### 4.1 Total number of missing values in the dataset
+```{r,echo=TRUE}
+length(data[which(is.na(data$steps)),1]);
+```
+### 4.2 Filling in all of the missing values with the **mean** for that 5-minute interval
+```{r,echo=TRUE}
+## Get the mean steps for each interval
+tmp4 <- tapply(data$steps,data$interval,mean,na.rm=TRUE);
+## Get the interval name
+tmpnames <- as.integer(names(tmp4));
+## Get the mean value
+tmpvalues <- as.integer(tmp4);
+## For each missing steps, find the interval name and then get the corresponding mean value and then fill in the missing value by that mean value
+result <- sapply(which(is.na(data$steps)),function(x) data[x,1] <- tmpvalues[which(tmpnames==data[x,3])]);
+```
+### 4.3 The new dataset that is equal to the original dataset but with the missing data filled in
+```{r,echo=TRUE}
+newdata <- data;
+newdata[which(is.na(newdata$steps)),1] <- result;
+```
+
+
+### 4.4 The histogram
+```{r,echo=TRUE}
+## The histogram
+hist(tapply(newdata$steps,newdata$date,sum,na.rm=TRUE),main="Total number of steps distribution",xlab="steps",ylab="Frequency");
+## The mean
+mean(tapply(newdata$steps,newdata$date,sum,na.rm=TRUE));
+## The median
+median(tapply(newdata$steps,newdata$date,sum,na.rm=TRUE));
+```
+The mean and the median increase. The missing is filled in with the mean for that interal, so the total steps for each day increase and as an result, the mean for the total steps each day increase.
+According to the time series in 3.1, it is a little left skewed, so the mean is a little more that the median. When we use the mean interval value to fill in the missing, the median for the total steps each day increase.
+
+
+## 5 Are there differences in activity patterns between weekdays and weekends?
+### 5.1 Create a nwe variable named weekend in the dataset
+```{r,echo=TRUE}
+## Add the variable and initialed with "0"
+data$weekend <- "Weekday";
+data[which(weekdays(as.Date(data$date)) %in% c("Saturday","Sunday")),"weekend"] <- "Weekend";
+```
+### 5.2 The plot
+```{r,echo=TRUE}
+library(lattice);
+tmp5 <- sqldf("select interval, weekend, avg(steps) as steps from data where steps>=0 group by interval, weekend order by interval");
+xyplot(steps ~ interval | weekend, data = tmp5, type='l', layout=c(1,2));
+```
 
 
 
-## What is mean total number of steps taken per day?
 
 
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
